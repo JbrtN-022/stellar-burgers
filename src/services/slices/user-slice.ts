@@ -7,22 +7,21 @@ import {
   getUserApi,
   updateUserApi,
   logoutApi,
+  refreshToken,
   forgotPasswordApi,
   resetPasswordApi,
   TRegisterData,
   TLoginData
 } from '../../utils/burger-api';
 
-// Интерфейс состояния пользователя
 export interface UserState {
-  isLoading: boolean; // Идет загрузка
-  user: TUser | null; // Данные пользователя
-  isAuthorized: boolean; // Авторизован ли пользователь
-  isAuthChecked: boolean; // Проверена ли авторизация
-  error: string | null; // Ошибки
+  isLoading: boolean;
+  user: TUser | null;
+  isAuthorized: boolean;
+  isAuthChecked: boolean;
+  error: string | null;
 }
 
-// Начальное состояние
 const initialState: UserState = {
   isLoading: false,
   user: null,
@@ -31,124 +30,157 @@ const initialState: UserState = {
   error: null
 };
 
-// Асинхронные действия (thunks)
+export const loginUserThunk = createAsyncThunk(
+  'user/login',
+  (loginData: TLoginData) => loginUserApi(loginData)
+);
 
-// Вход пользователя
-export const loginUserThunk = createAsyncThunk('user/login', loginUserApi);
-
-// Регистрация пользователя
 export const registerUserThunk = createAsyncThunk(
   'user/register',
-  registerUserApi
+  (registerData: TRegisterData) => registerUserApi(registerData)
 );
 
-// Выход пользователя
 export const logoutUserThunk = createAsyncThunk('user/logout', logoutApi);
 
-// Запрос на восстановление пароля
+export const updateUserThunk = createAsyncThunk(
+  'user/update',
+  (user: Partial<TRegisterData>) => updateUserApi(user)
+);
+
 export const forgotPasswordThunk = createAsyncThunk(
   'user/forgotPassword',
-  forgotPasswordApi
+  (data: { email: string }) => forgotPasswordApi(data)
 );
 
-// Сброс пароля
 export const resetPasswordThunk = createAsyncThunk(
   'user/resetPassword',
-  resetPasswordApi
+  (data: { password: string; token: string }) => resetPasswordApi(data)
 );
 
-// Обновление данных пользователя
-export const updateUserThunk = createAsyncThunk('user/update', updateUserApi);
-
-// Получение данных пользователя
 export const getUserThunk = createAsyncThunk('user/get', getUserApi);
 
-// Создание slice для пользователя
-const userSlice = createSlice({
+export const userSlice = createSlice({
   name: 'user',
   initialState,
   reducers: {
-    // Очистка ошибок
     clearUserError: (state) => {
       state.error = null;
     },
-    // Проверка статуса пользователя
     checkUserStatus: (state) => {
       state.isAuthChecked = true;
     }
   },
   selectors: {
-    getUserStateSelector: (state) => state, // Полное состояние
-    getUserSelector: (state) => state.user, // Данные пользователя
-    isAuthorizedSelector: (state) => state.isAuthorized, // Статус авторизации
-    getUserErrorSelector: (state) => state.error // Ошибки
+    getUserStateSelector: (state) => state,
+    getUserSelector: (state) => state.user,
+    isAuthorizedSelector: (state) => state.isAuthorized,
+    getUserErrorSelector: (state) => state.error
   },
   extraReducers: (builder) => {
-    // Обработка состояний pending и rejected для всех actions
-    const handlePending = (state: UserState) => {
-      state.isLoading = true;
-      state.error = null;
-    };
-
-    const handleRejected = (
-      state: UserState,
-      action: { error: { message: string } }
-    ) => {
-      state.isLoading = false;
-      state.error = action.error.message;
-    };
-
-    // Общие обработчики для всех запросов
     builder
-      .addMatcher((action) => action.type.endsWith('/pending'), handlePending)
-      .addMatcher(
-        (action) => action.type.endsWith('/rejected'),
-        handleRejected
-      );
-
-    // Успешные сценарии для каждого action
-    builder
+      .addCase(loginUserThunk.pending, (state) => {
+        state.isLoading = true;
+        state.error = null;
+      })
+      .addCase(loginUserThunk.rejected, (state, { error }) => {
+        state.isLoading = false;
+        state.error = error.message as string;
+      })
       .addCase(loginUserThunk.fulfilled, (state, { payload }) => {
         state.isLoading = false;
-        state.user = payload.user;
-        state.isAuthorized = true;
-        setCookie('accessToken', payload.accessToken); // Сохраняем токен в куки
-        localStorage.setItem('refreshToken', payload.refreshToken); // Сохраняем refreshToken
-      })
-      .addCase(registerUserThunk.fulfilled, (state, { payload }) => {
-        state.isLoading = false;
+        state.error = null;
         state.user = payload.user;
         state.isAuthorized = true;
         setCookie('accessToken', payload.accessToken);
         localStorage.setItem('refreshToken', payload.refreshToken);
       })
+      .addCase(registerUserThunk.pending, (state) => {
+        state.isLoading = true;
+        state.error = null;
+      })
+      .addCase(registerUserThunk.rejected, (state, { error }) => {
+        state.isLoading = false;
+        state.error = error.message as string;
+      })
+      .addCase(registerUserThunk.fulfilled, (state, { payload }) => {
+        state.isLoading = false;
+        state.error = null;
+        state.user = payload.user;
+        state.isAuthorized = true;
+        setCookie('accessToken', payload.accessToken);
+        localStorage.setItem('refreshToken', payload.refreshToken);
+      })
+      .addCase(logoutUserThunk.pending, (state) => {
+        state.isLoading = true;
+        state.error = null;
+      })
+      .addCase(logoutUserThunk.rejected, (state, { error }) => {
+        state.isLoading = false;
+        state.error = error.message as string;
+      })
       .addCase(logoutUserThunk.fulfilled, (state) => {
         state.isLoading = false;
+        state.error = null;
         state.user = null;
         state.isAuthorized = false;
-        deleteCookie('accessToken'); // Удаляем токен
-        localStorage.removeItem('refreshToken'); // Удаляем refreshToken
+        deleteCookie('accessToken');
+        localStorage.removeItem('refreshToken');
+      })
+      .addCase(updateUserThunk.pending, (state) => {
+        state.isLoading = true;
+        state.error = null;
+      })
+      .addCase(updateUserThunk.rejected, (state, { error }) => {
+        state.isLoading = false;
+        state.error = error.message as string;
       })
       .addCase(updateUserThunk.fulfilled, (state, { payload }) => {
         state.isLoading = false;
+        state.error = null;
         state.user = payload.user;
         state.isAuthorized = true;
       })
+      .addCase(forgotPasswordThunk.pending, (state) => {
+        state.isLoading = true;
+        state.error = null;
+      })
+      .addCase(forgotPasswordThunk.rejected, (state, { error }) => {
+        state.isLoading = false;
+        state.error = error.message as string;
+      })
       .addCase(forgotPasswordThunk.fulfilled, (state) => {
         state.isLoading = false;
+        state.error = null;
+      })
+      .addCase(resetPasswordThunk.pending, (state) => {
+        state.isLoading = true;
+        state.error = null;
+      })
+      .addCase(resetPasswordThunk.rejected, (state, { error }) => {
+        state.isLoading = false;
+        state.error = error.message as string;
       })
       .addCase(resetPasswordThunk.fulfilled, (state) => {
         state.isLoading = false;
+        state.error = null;
+      })
+      .addCase(getUserThunk.pending, (state) => {
+        state.isLoading = true;
+        state.error = null;
+      })
+      .addCase(getUserThunk.rejected, (state, { error }) => {
+        state.isLoading = false;
+        state.error = error.message as string;
       })
       .addCase(getUserThunk.fulfilled, (state, { payload }) => {
         state.isLoading = false;
+        state.error = null;
         state.isAuthorized = true;
         state.user = payload.user;
       });
   }
 });
 
-// Экспорты
 export { initialState as userInitialState };
 export const { clearUserError, checkUserStatus } = userSlice.actions;
 export const {
