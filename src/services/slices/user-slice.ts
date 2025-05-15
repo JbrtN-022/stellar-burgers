@@ -30,31 +30,25 @@ const initialState: UserState = {
   error: null
 };
 
-export const loginUserThunk = createAsyncThunk(
-  'user/login',
-  (loginData: TLoginData) => loginUserApi(loginData)
-);
+export const loginUserThunk = createAsyncThunk('user/login', loginUserApi);
 
 export const registerUserThunk = createAsyncThunk(
   'user/register',
-  (registerData: TRegisterData) => registerUserApi(registerData)
+  registerUserApi
 );
 
 export const logoutUserThunk = createAsyncThunk('user/logout', logoutApi);
 
-export const updateUserThunk = createAsyncThunk(
-  'user/update',
-  (user: Partial<TRegisterData>) => updateUserApi(user)
-);
+export const updateUserThunk = createAsyncThunk('user/update', updateUserApi);
 
 export const forgotPasswordThunk = createAsyncThunk(
   'user/forgotPassword',
-  (data: { email: string }) => forgotPasswordApi(data)
+  forgotPasswordApi
 );
 
 export const resetPasswordThunk = createAsyncThunk(
   'user/resetPassword',
-  (data: { password: string; token: string }) => resetPasswordApi(data)
+  resetPasswordApi
 );
 
 export const getUserThunk = createAsyncThunk('user/get', getUserApi);
@@ -74,7 +68,8 @@ export const userSlice = createSlice({
     getUserStateSelector: (state) => state,
     getUserSelector: (state) => state.user,
     isAuthorizedSelector: (state) => state.isAuthorized,
-    getUserErrorSelector: (state) => state.error
+    getUserErrorSelector: (state) => state.error,
+    isAuthCheckedSelector: (state) => state.isAuthChecked
   },
   extraReducers: (builder) => {
     builder
@@ -167,16 +162,19 @@ export const userSlice = createSlice({
       .addCase(getUserThunk.pending, (state) => {
         state.isLoading = true;
         state.error = null;
+        state.isAuthChecked = false;
       })
       .addCase(getUserThunk.rejected, (state, { error }) => {
         state.isLoading = false;
         state.error = error.message as string;
+        state.isAuthChecked = true;
       })
       .addCase(getUserThunk.fulfilled, (state, { payload }) => {
         state.isLoading = false;
         state.error = null;
         state.isAuthorized = true;
         state.user = payload.user;
+        state.isAuthChecked = true;
       });
   }
 });
@@ -187,7 +185,9 @@ export const {
   getUserStateSelector,
   getUserSelector,
   isAuthorizedSelector,
-  getUserErrorSelector
+  getUserErrorSelector,
+  isAuthCheckedSelector
 } = userSlice.selectors;
 
 export default userSlice.reducer;
+

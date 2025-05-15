@@ -5,28 +5,40 @@ import {
   loginUserThunk,
   clearUserError
 } from '../../services/slices/user-slice';
+import { useForm } from '../hooks/useForm';
 export const Login: FC = () => {
   const dispatch = useDispatch();
   const error = useSelector((state) => state.user.error);
-  const [email, setEmail] = useState('');
-  const [password, setPassword] = useState('');
+
+  const { values, handleChange, setValues } = useForm({
+    email: '',
+    password: ''
+  });
 
   useEffect(() => {
     dispatch(clearUserError());
-  });
+  }, [dispatch]);
 
   const handleSubmit = (e: SyntheticEvent) => {
     e.preventDefault();
-    dispatch(loginUserThunk({ email, password }));
+    dispatch(loginUserThunk(values));
   };
 
   return (
     <LoginUI
       errorText={error?.toString()}
-      email={email}
-      setEmail={setEmail}
-      password={password}
-      setPassword={setPassword}
+      email={values.email}
+      setEmail={(value: string | ((prev: string) => string)) => {
+        const newValue =
+          typeof value === 'function' ? value(values.email) : value;
+        setValues({ ...values, email: newValue });
+      }}
+      password={values.password}
+      setPassword={(value: string | ((prev: string) => string)) => {
+        const newValue =
+          typeof value === 'function' ? value(values.password) : value;
+        setValues({ ...values, password: newValue });
+      }}
       handleSubmit={handleSubmit}
     />
   );
