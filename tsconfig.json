@@ -30,7 +30,7 @@
     }
   },
   "exclude": [
-    "src/pages/hooks/useForm.js"
+    "src/pages/hooks/useForm.tsx"
   ],
   "include": ["src"]
 }
