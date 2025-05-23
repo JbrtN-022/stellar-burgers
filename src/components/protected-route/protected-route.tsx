@@ -1,46 +1,67 @@
-import { Navigate, useLocation } from 'react-router-dom';
-import { useSelector } from '../../services/store';
+// src/components/protected-route.tsx
+import { Navigate, useLocation, useNavigate } from 'react-router-dom';
+import { useSelector, useDispatch } from '../../services/store';
 import {
   isAuthorizedSelector,
   isAuthCheckedSelector
 } from '../../services/slices/user-slice';
-import { ReactElement } from 'react';
+import { ReactElement, useEffect } from 'react';
 import { Preloader } from '@ui';
-// Типы для защищенного маршрута
+import {
+  openOrderModal,
+  closeOrderModal
+} from '../../services/slices/modal-slice';
+
 type TProtectedRoute = {
-  onlyUnAuth?: boolean; // Только для неавторизованных
-  children: ReactElement; // Дочерний элемент
+  onlyUnAuth?: boolean;
+  children: ReactElement;
 };
 
-// Компонент защищенного маршрута
 export const ProtectedRoute = ({
   onlyUnAuth = false,
   children
 }: TProtectedRoute) => {
   const location = useLocation();
+  const navigate = useNavigate();
+  const dispatch = useDispatch();
   const isAuthorized = useSelector(isAuthorizedSelector);
   const isAuthChecked = useSelector(isAuthCheckedSelector);
-  const from = location.state?.from?.pathname || '/'; // Откуда пришел пользователь
+  const { isOrderModalOpen, previousPath } = useSelector(
+    (state) => state.modal
+  );
+  const from = location.state?.from?.pathname || '/';
+
+  // Обработка модального окна заказов
+  useEffect(() => {
+    const match = location.pathname.match(/\/profile\/orders\/(\d+)/);
+    if (match) {
+      const orderNumber = parseInt(match[1], 10);
+      dispatch(
+        openOrderModal({
+          number: orderNumber,
+          previousPath: location.state?.from?.pathname || '/profile/orders'
+        })
+      );
+    } else if (isOrderModalOpen) {
+      dispatch(closeOrderModal());
+    }
+  }, [location.pathname, dispatch, isOrderModalOpen]);
 
   if (!isAuthChecked) {
-    return <Preloader />; // Показываем индикатор загрузки
+    return <Preloader />;
   }
 
-  // Если нет дочерних элементов - ничего не рендерим
   if (!children) {
     return null;
   }
 
-  // Если маршрут только для неавторизованных и пользователь авторизован
   if (onlyUnAuth && isAuthorized) {
-    return <Navigate to={from} replace />; // Перенаправляем обратно
+    return <Navigate to={from} replace />;
   }
 
-  // Если маршрут для авторизованных и пользователь не авторизован
   if (!onlyUnAuth && !isAuthorized) {
-    return <Navigate to='/login' state={{ from: location }} replace />; // На страницу входа
+    return <Navigate to='/login' state={{ from: location }} replace />;
   }
 
-  // Если все проверки пройдены - рендерим детей
   return children;
 };

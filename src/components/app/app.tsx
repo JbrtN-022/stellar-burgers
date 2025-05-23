@@ -16,46 +16,80 @@ import {
   getUserThunk,
   checkUserStatus
 } from '../../services/slices/user-slice';
-import { useDispatch } from '../../services/store';
+import { useDispatch, useSelector } from '../../services/store';
 import { AppHeader, Modal, OrderInfo, IngredientDetails } from '@components';
 import { getIngredientsThunk } from '../../services/slices/ingredients-slice';
 import { Routes, Route, useNavigate, useLocation } from 'react-router-dom';
 import { ProtectedRoute } from '../protected-route/protected-route';
+import {
+  openOrderModal,
+  closeOrderModal
+} from '../../services/slices/modal-slice';
+
 const App = () => {
   const location = useLocation();
   const navigate = useNavigate();
   const dispatch = useDispatch();
+  const { isOrderModalOpen, orderNumber } = useSelector((state) => state.modal);
   const background = location.state?.background;
-
+  const showModal = Boolean(background || (isOrderModalOpen && !background));
   useEffect(() => {
-    dispatch(getUserThunk())
-      .unwrap()
-      .catch((error) => {
-        console.log(error);
-      })
-      .finally(() => {
-        dispatch(checkUserStatus());
-      });
+    dispatch(getUserThunk());
     dispatch(getIngredientsThunk());
   }, [dispatch]);
+
+  // Обработка открытия модального окна при прямом переходе по ссылке
+  useEffect(() => {
+    const match = location.pathname.match(/\/(feed|profile\/orders)\/(\d+)/);
+    if (match) {
+      const [, route, number] = match;
+      const orderNum = parseInt(number, 10);
+
+      dispatch(
+        openOrderModal({
+          number: orderNum,
+          previousPath: route === 'feed' ? '/feed' : '/profile/orders'
+        })
+      );
+
+      // Для прямого перехода - заменяем историю, чтобы был "background"
+      navigate(location.pathname, {
+        replace: true,
+        state: {
+          background: {
+            pathname: route === 'feed' ? '/feed' : '/profile/orders',
+            state: { background: null }
+          }
+        }
+      });
+    }
+  }, [location.pathname, dispatch, navigate]);
+
+  const handleCloseModal = () => {
+    dispatch(closeOrderModal());
+    if (location.pathname.includes('/profile/orders')) {
+      navigate('/profile/orders', {
+        replace: true,
+        state: { background: null }
+      });
+    } else if (location.pathname.includes('/feed')) {
+      navigate('/feed', { replace: true, state: { background: null } });
+    } else {
+      navigate(-1);
+    }
+  };
 
   return (
     <div className={styles.app}>
       <AppHeader />
+
+      {/* Основные роуты */}
       <Routes location={background || location}>
         <Route path='/' element={<ConstructorPage />} />
         <Route path='/ingredients/:id' element={<IngredientDetails />} />
         <Route path='/feed' element={<Feed />} />
         <Route path='/feed/:number' element={<OrderInfo />} />
 
-        <Route
-          path='/login'
-          element={
-            <ProtectedRoute onlyUnAuth>
-              <Login />
-            </ProtectedRoute>
-          }
-        />
         <Route
           path='/login'
           element={
@@ -106,14 +140,16 @@ const App = () => {
         />
         <Route path='*' element={<NotFound404 />} />
       </Routes>
-      {background && (
+
+      {/* Модальные окна */}
+      {showModal && (
         <Routes>
           <Route
             path='/feed/:number'
             element={
               <Modal
-                title={`#0${location.pathname.match(/\d+/)}`}
-                onClose={() => navigate(-1)}
+                title={`#${location.pathname.match(/\d+/)}`}
+                onClose={handleCloseModal}
               >
                 <OrderInfo />
               </Modal>
@@ -122,7 +158,7 @@ const App = () => {
           <Route
             path='/ingredients/:id'
             element={
-              <Modal title={'Детали ингредиента'} onClose={() => navigate(-1)}>
+              <Modal title='Детали ингредиента' onClose={handleCloseModal}>
                 <IngredientDetails />
               </Modal>
             }
@@ -132,10 +168,8 @@ const App = () => {
             element={
               <ProtectedRoute>
                 <Modal
-                  title={`#0${location.pathname.match(/\d+/)}`}
-                  onClose={() => {
-                    navigate('/profile/orders');
-                  }}
+                  title={`#${location.pathname.match(/\d+/)}`}
+                  onClose={handleCloseModal}
                 >
                   <OrderInfo />
                 </Modal>
