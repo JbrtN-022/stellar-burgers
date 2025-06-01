@@ -33,37 +33,13 @@ const App = () => {
   const { isOrderModalOpen, orderNumber } = useSelector((state) => state.modal);
   const background = location.state?.background;
   const showModal = Boolean(background || (isOrderModalOpen && !background));
+
   useEffect(() => {
     dispatch(getUserThunk());
     dispatch(getIngredientsThunk());
   }, [dispatch]);
 
   // Обработка открытия модального окна при прямом переходе по ссылке
-  useEffect(() => {
-    const match = location.pathname.match(/\/(feed|profile\/orders)\/(\d+)/);
-    if (match) {
-      const [, route, number] = match;
-      const orderNum = parseInt(number, 10);
-
-      dispatch(
-        openOrderModal({
-          number: orderNum,
-          previousPath: route === 'feed' ? '/feed' : '/profile/orders'
-        })
-      );
-
-      // Для прямого перехода - заменяем историю, чтобы был "background"
-      navigate(location.pathname, {
-        replace: true,
-        state: {
-          background: {
-            pathname: route === 'feed' ? '/feed' : '/profile/orders',
-            state: { background: null }
-          }
-        }
-      });
-    }
-  }, [location.pathname, dispatch, navigate]);
 
   const handleCloseModal = () => {
     dispatch(closeOrderModal());
@@ -138,11 +114,19 @@ const App = () => {
             </ProtectedRoute>
           }
         />
+        <Route
+          path='/profile/orders/:number'
+          element={
+            <ProtectedRoute>
+              <OrderInfo />
+            </ProtectedRoute>
+          }
+        />
         <Route path='*' element={<NotFound404 />} />
       </Routes>
 
       {/* Модальные окна */}
-      {showModal && (
+      {background && (
         <Routes>
           <Route
             path='/feed/:number'
