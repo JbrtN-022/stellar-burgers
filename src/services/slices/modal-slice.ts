@@ -1,12 +1,12 @@
 import { createSlice, PayloadAction } from '@reduxjs/toolkit';
 
-type ModalState = {
+export type ModalState = {
   isOrderModalOpen: boolean;
   orderNumber: number | null;
   previousPath: string | null;
 };
 
-const initialState: ModalState = {
+export const initialState: ModalState = {
   isOrderModalOpen: false,
   orderNumber: null,
   previousPath: null
