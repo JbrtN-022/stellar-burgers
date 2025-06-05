@@ -57,19 +57,7 @@ module.exports = {
     new Dotenv()
   ],
   resolve: {
-    extensions: [
-      '*',
-      '.js',
-      '.jsx',
-      '.ts',
-      '.tsx',
-      '.json',
-      '.css',
-      '.scss',
-      '.png',
-      '.svg',
-      '.jpg'
-    ],
+    extensions: ['.js', '.jsx', '.ts', '.tsx', '.json', '.css', '.scss', '.png', '.svg', '.jpg'], // Убрано '*'
     alias: {
       '@pages': path.resolve(__dirname, './src/pages'),
       '@components': path.resolve(__dirname, './src/components'),
@@ -83,12 +71,14 @@ module.exports = {
   },
   output: {
     path: path.resolve(__dirname, './dist'),
-    filename: 'bundle.js'
+    filename: 'bundle.js',
+     publicPath: '/'
   },
   devServer: {
     static: path.join(__dirname, './dist'),
     compress: true,
     historyApiFallback: true,
-    port: 4000
+    port: 4000,
+    open: true
   }
 };

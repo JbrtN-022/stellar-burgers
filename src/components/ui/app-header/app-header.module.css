@@ -21,6 +21,7 @@
 }
 
 .link_active {
+  display: flex;
   color: var(--text-primary-color);
 }
 

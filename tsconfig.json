@@ -25,8 +25,12 @@
       "@utils-types": ["src/utils/types"],
       "@api": ["src/utils/burger-api.ts"],
       "@slices": ["src/services/slices"],
-      "@selectors": ["src/services/selectors"]
+      "@selectors": ["src/services/selectors"],
+     // "@store": ["src/services/store.ts"]
     }
   },
+  "exclude": [
+    "src/pages/hooks/useForm.tsx"
+  ],
   "include": ["src"]
 }
